@@ -1,0 +1,139 @@
+_schema-version: "3.1"
+ID: cap-ui
+description: A simple CAP project.
+version: 1.0.0
+modules:
+- name: cap-ui-srv
+  type: nodejs
+  path: gen/srv
+  requires:
+  - name: cap-ui-db
+  - name: cap-ui-auth
+  provides:
+  - name: srv-api
+    properties:
+      srv-url: ${default-url}
+  parameters:
+    buildpack: nodejs_buildpack
+    readiness-health-check-http-endpoint: /health
+    readiness-health-check-type: http
+  build-parameters:
+    builder: npm
+- name: cap-ui-db-deployer
+  type: hdb
+  path: gen/db
+  requires:
+  - name: cap-ui-db
+  parameters:
+    buildpack: nodejs_buildpack
+- name: cap-ui-destination-content
+  type: com.sap.application.content
+  requires:
+  - name: cap-ui-destination-service
+    parameters:
+      content-target: true
+  - name: cap-ui_html_repo_host
+    parameters:
+      service-key:
+        name: cap-ui_html_repo_host-key
+  - name: cap-ui-auth
+    parameters:
+      service-key:
+        name: cap-ui-auth-key
+  parameters:
+    content:
+      instance:
+        destinations:
+        - Name: cap_ui2_cap_ui_html_repo_host
+          ServiceInstanceName: cap-ui-html5-app-host-service
+          ServiceKeyName: cap-ui_html_repo_host-key
+          sap.cloud.service: cap-ui2
+        - Authentication: OAuth2UserTokenExchange
+          Name: cap_ui2_cap_ui_auth
+          ServiceInstanceName: cap-ui-auth
+          ServiceKeyName: cap-ui-auth-key
+          sap.cloud.service: cap-ui2
+        existing_destinations_policy: ignore
+  build-parameters:
+    no-source: true
+- name: cap-ui-app-content
+  type: com.sap.application.content
+  path: .
+  requires:
+  - name: cap-ui_html_repo_host
+    parameters:
+      content-target: true
+  build-parameters:
+    build-result: resources
+    requires:
+    - artifacts:
+      - miyasutabooksui.zip
+      name: miyasutabooksui
+      target-path: resources/
+- name: miyasutabooksui
+  type: html5
+  path: app/books-ui
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+resources:
+- name: cap-ui-db
+  type: com.sap.xs.hdi-container
+  parameters:
+    service: hana
+    service-plan: hdi-shared
+- name: cap-ui-auth
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      tenant-mode: dedicated
+      xsappname: cap-ui-${org}-${space}
+    path: ./xs-security.json
+    service: xsuaa
+    service-plan: application
+- name: cap-ui-destination-service
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: true
+      init_data:
+        instance:
+          destinations:
+          - Authentication: NoAuthentication
+            Name: ui5
+            ProxyType: Internet
+            Type: HTTP
+            URL: https://ui5.sap.com
+          - Authentication: NoAuthentication
+            HTML5.DynamicDestination: true
+            HTML5.ForwardAuthToken: true
+            Name: cap-ui-srv-api
+            ProxyType: Internet
+            Type: HTTP
+            URL: ~{srv-api/srv-url}
+          existing_destinations_policy: update
+      version: 1.0.0
+    service: destination
+    service-name: cap-ui-destination-service
+    service-plan: lite
+  requires:
+  - name: srv-api
+- name: cap-ui_html_repo_host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-name: cap-ui-html5-app-host-service
+    service-plan: app-host
+parameters:
+  deploy_mode: html5-repo
+  enable-parallel-deployments: true
+build-parameters:
+  before-all:
+  - builder: custom
+    commands:
+    - npm ci
+    - npx cds build --production
