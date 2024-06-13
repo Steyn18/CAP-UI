@@ -1,25 +1,24 @@
-# Getting Started
-
-Welcome to your new project.
-
-It contains these folders and files, following our recommended project layout:
-
-File or Folder | Purpose
----------|----------
-`app/` | content for UI frontends goes here
-`db/` | your domain models and data go here
-`srv/` | your service models and code go here
-`package.json` | project metadata and configuration
-`readme.md` | this getting started guide
+# CAP-UI
+Working sample with html5(launchpad config) using managed approuter with ui(accessable) and srv(not accessable)
 
 
-## Next Steps
+# Reference blog
+https://community.sap.com/t5/technology-blogs-by-members/how-to-deploy-a-ui5-app-inside-a-cap-mta-project-and-make-it-available-from/ba-p/13560177
 
-- Open a new terminal and run `cds watch`
-- (in VS Code simply choose _**Terminal** > Run Task > cds watch_)
-- Start adding content, for example, a [db/schema.cds](db/schema.cds).
+# Steps Followed 
 
+cds init cap-ui  
+cd cap-ui
+cds add samples  //going to deprecate use cds add tiny-sample
+cds add hana
+cds add xsuaa
+cds add mta
 
-## Learn More
+Create Managed Approuter
 
-Learn more at https://cap.cloud.sap/docs/get-started/.
+Add UI with deployed config and launchpad config
+
+mbt build
+cf deploy mta_archives/file.mtar
+
+Access UI5 application in HTML5 Applications inside BTP Cockpit..
